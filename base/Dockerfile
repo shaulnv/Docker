@@ -1,4 +1,4 @@
-ARG UBUNTU_VERSION=22.10
+ARG UBUNTU_VERSION=24.04
 FROM ubuntu:${UBUNTU_VERSION} AS ubuntu
 
 FROM ubuntu AS java
@@ -14,10 +14,11 @@ RUN jlink --compress=2 --strip-debug --add-modules=java.base --output /opt/java 
     && strip -p --strip-unneeded /opt/java/lib/*.so
 
 FROM ubuntu
+ARG UBUNTU_VERSION
 LABEL org.srcml.email="srcmldev@gmail.com" \
       org.srcml.url="srcml.org" \
       org.srcml.distro="ubuntu" \
-      org.srcml.osversion="22.04"
+      org.srcml.osversion="${UBUNTU_VERSION}"
 
 # Copy lightweight jre install
 COPY --from=java /opt/java /opt/java
@@ -34,6 +35,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     zip \
     g++ \
     make \
+    cmake \
     ninja-build \
     libxml2-dev \
     libxml2-utils \
@@ -46,16 +48,24 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     man \
     file \
     dpkg-dev \
+    libboost-all-dev \
+    antlr \
     && rm -rf /var/lib/apt/lists/*
 
-# CMake
-ARG TARGETPLATFORM
-RUN case "${TARGETPLATFORM}" in \
-         "linux/amd64")  ARCHITECTURE="x86_64"   ;; \
-         "linux/arm64")  ARCHITECTURE="aarch64"  ;; \
-         *)  exit 1 ;; \
-    esac; \
-    curl --insecure -L "https://github.com/Kitware/CMake/releases/download/v3.24.1/cmake-3.24.1-linux-${ARCHITECTURE}.tar.gz" | tar xz --strip-components=1 -C /usr/local
+ENV CLASSPATH=/usr/share/java/antlr.jar
+
+# Install antlr2 from source
+COPY antlr-2.7.7-gcc-13.patch /tmp
+RUN cd /tmp && \
+    curl --insecure -L "https://www.antlr2.org/download/antlr-2.7.7.tar.gz" | tar xz && \
+    cd antlr-2.7.7 && \
+    git apply /tmp/antlr-2.7.7-gcc-13.patch && \
+    export CXXFLAGS=-fPIC && \
+    ./configure && \
+    make -j && \
+    make install && \
+    cd /tmp \
+    rm -rf "antlr-2.7.7*"
 
 # Allow man pages to be installed
 RUN sed -i '/path-exclude=\/usr\/share\/man\/*/c\#path-exclude=\/usr\/share\/man\/*' /etc/dpkg/dpkg.cfg.d/excludes

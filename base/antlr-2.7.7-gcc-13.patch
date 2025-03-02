@@ -1,0 +1,13 @@
+diff --git a/lib/cpp/antlr/CharScanner.hpp b/lib/cpp/antlr/CharScanner.hpp
+index 8a97e97..8c2c6f0 100644
+--- a/lib/cpp/antlr/CharScanner.hpp
++++ b/lib/cpp/antlr/CharScanner.hpp
+@@ -12,6 +12,8 @@
+ 
+ #include <map>
+ 
++#include <cstring>
++
+ #ifdef HAS_NOT_CCTYPE_H
+ #include <ctype.h>
+ #else
